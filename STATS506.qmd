@@ -2,7 +2,9 @@
 title: "STATS 506 Problem Set #2"
 author: "Snigdha Pakala"
 editor: visual
-format: html
+format:
+  html:
+    embed-resources: true
 ---
 
 ## Problem 1
@@ -10,46 +12,225 @@ format: html
 ### 1a:
 
 ```{r}
+# Version 1: loop
 
+#' This is a dice game created using a for loop where the user enters the number of desired dice rolls and pays $2 per roll, and if they roll a 3 or 5, they get double that number in winnings.
+#'
+#' @param rolls This is the number of dice rolls the user wishes to roll (and pay for)
+#'
+#' @return The total net amount - won or lost - is returned by getting the difference between total winnings and total cost of each roll
+#' @export
+#'
+#' @examples
+play_dice_loop <- function(rolls) {
+  # Check that user input is a positive number
+  if ((! is.numeric(rolls)) || rolls <= 0){
+    stop("Please enter a positive integer for the number of rolls")
+  }
+  # Check for integer/whole number input
+  if (rolls != floor(rolls)){
+    stop("Integer required for the number of rolls")
+  }
+  
+  cost <- rolls * 2
+  winnings <- 0
+  
+  for (roll in 1:rolls) {
+    num <- sample(1:6, 1, replace = TRUE)
+    if (num == 3 || num == 5) {
+      winnings <- winnings + (num * 2)
+    }
+    # Quick check to make sure the function is working as intended:
+    # cat(paste("Roll", roll, ":", "dice:", num, "winnings:", winnings, "\n"))
+  }
+  
+  return(winnings - cost)
+}
+
+# Quick check: calling the function 
+# play_dice_loop(10)
+
+###############################################################################
+# Version 2: Built-in R vectorized functions
+
+#' This is a dice game created using built-in R vectorized functions where the user enters the number of desired dice rolls and pays $2 per roll, and if they roll a 3 or 5, they get double that number in winnings.
+#'
+#' @param rolls This is the number of dice rolls the user wishes to roll (and pay for)
+#'
+#' @return The total net amount - won or lost - is returned by getting the difference between total winnings and total cost of each roll
+#' @export
+#'
+#' @examples
+play_dice_vecs <- function(rolls) {
+  # Same checks as above function
+  if ((! is.numeric(rolls)) || rolls <= 0){
+    stop("Please enter a positive integer for the number of rolls")
+  }
+  if (rolls != floor(rolls)){
+    stop("Integer required for the number of rolls")
+  }
+  
+  cost <- rolls * 2
+  # Use sampling with replacement to get a vector of outcomes
+  roll_outcomes <- c(sample(1:6, rolls, replace = TRUE))
+  # From the outcomes, add up all the 3s and 5s and multiply by their respective doubling scalor for total winnings
+  winnings <- (sum(roll_outcomes == 3) * 6) + (sum(roll_outcomes == 5) * 10)
+  # Return net amount
+  return(winnings - cost)
+}
+
+# play_dice_vecs(10)
+
+
+###############################################################################
+# Version 3: Single table
+
+#' This is a dice game created using table functions where the user enters the number of desired dice rolls and pays $2 per roll, and if they roll a 3 or 5, they get double that number in winnings.
+#'
+#' @param rolls This is the number of dice rolls the user wishes to roll (and pay for)
+#'
+#' @return The total net amount - won or lost - is returned by getting the difference between total winnings and total cost of each roll 
+#' @export
+#'
+#' @examples
+play_dice_tbl <- function(rolls) {
+  # Same checks as above function
+  if ((! is.numeric(rolls)) || rolls <= 0){
+    stop("Please enter a positive integer for the number of rolls")
+  }
+  if (rolls != floor(rolls)){
+    stop("Integer required for the number of rolls")
+  }
+  cost <- rolls * 2
+  roll_outcomes <- table(sample(1:6, rolls, replace = TRUE))
+  # The following code prevents an out of bounds error if 3 or 5 are not in the sample
+  winnings <- ((ifelse("3" %in% names(roll_outcomes), roll_outcomes[["3"]], 0) * 6) +
+                (ifelse("5" %in% names(roll_outcomes), roll_outcomes[["5"]], 0) * 10))
+  # cat(paste("cost:", cost, "outcomes:", roll_outcomes, "winnings:", winnings))
+  return(winnings - cost)
+}
+
+# play_dice_tbl(1)
+
+###############################################################################
+# Version 4: Apply function
+
+#' This is a dice game created using sapply where the user enters the number of desired dice rolls and pays $2 per roll, and if they roll a 3 or 5, they get double that number in winnings.
+#'
+#' @param rolls This is the number of dice rolls the user wishes to roll (and pay for)
+#'
+#' @return The total net amount - won or lost - is returned by getting the difference between total winnings and total cost of each roll
+#' @export
+#'
+#' @examples
+play_dice_sapply <- function(rolls) {
+  # Same checks as above function
+  if ((! is.numeric(rolls)) || rolls <= 0) {
+    stop("Please enter a positive integer for the number of rolls")
+  }
+  if (rolls != floor(rolls)) {
+    stop("Integer required for the number of rolls")
+  }
+  
+  cost <- rolls * 2
+  roll_outcomes <- sample(1:6, rolls, replace = TRUE)
+  # Create a function that returns if a value was in our outcomes vector
+  freq_func <- function(val) {
+    return(sum(roll_outcomes == val))
+  }
+  # Use sapply to apply this function to both 3 and 5 to extract their frequencies in our sample
+  frequencies <- sapply(c(3, 5), freq_func)
+  winnings <- (frequencies[1] * 6) + (frequencies[2] * 10)
+  return(winnings - cost)
+}
+
+# play_dice_sapply(10)
 ```
 
 ### 1b:
 
 ```{r}
+# Show all 4 versions work:
+play_dice_loop(3)
+play_dice_loop(3000)
 
+play_dice_vecs(3)
+play_dice_vecs(3000)
+
+play_dice_tbl(3)
+play_dice_tbl(3000)
+
+play_dice_sapply(3)
+play_dice_sapply(3000)
 ```
+
+We see all 4 versions work in both instances of 3 and 3000 rolls.
 
 ### 1c:
 
-1.  
+```{r}
+# Show all 4 versions provide same result
 
-    ```{r}
+# For loop version with 3
+set.seed(092324)
+play_dice_loop(3)
 
-    ```
+# Vectorized version with 3
+set.seed(092324)
+play_dice_vecs(3)
 
-2.  
+# Table version with 3
+set.seed(092324)
+play_dice_tbl(3)
 
-    ```{r}
+# Sapply version with 3
+set.seed(092324)
+play_dice_sapply(3)
 
+###############################################
 
-    ```
+# For loop version with 3000
+set.seed(092324)
+play_dice_loop(3000)
 
-3.  
+# Vectorized version with 3000
+set.seed(092324)
+play_dice_vecs(3000)
 
-    ```{r}
+# Table version with 3000
+set.seed(092324)
+play_dice_tbl(3000)
 
-    ```
+# Sapply version with 3000
+set.seed(092324)
+play_dice_sapply(3000)
+```
 
-4.  
-
-    ```{r}
-
-    ```
+Setting the seed ensures identical results for both instances of 3 and 3000 rolls for all 4 versions.
 
 ### 1d:
 
 ```{r}
+library(microbenchmark)
+set.seed(092324)  # For consistent results
 
+results <- microbenchmark(
+  Loop = play_dice_loop(1000),
+  Vectorized = play_dice_vecs(1000),
+  Table = play_dice_tbl(1000),
+  Sapply = play_dice_sapply(1000)
+)
+
+print(results)
+
+results2 <- microbenchmark(
+  Loop = play_dice_loop(100000),
+  Vectorized = play_dice_vecs(100000),
+  Table = play_dice_tbl(100000),
+  Sapply = play_dice_sapply(100000)
+)
+
+results2
 ```
 
 ### 1e:
@@ -94,25 +275,20 @@ format: html
 
 ```
 
-## Problem 3
-
-### 3a:
-
-```{r}
-
-```
-
-### 3b:
-
-```{r}
-
-
-```
-
-### 3c:
+### 2f:
 
 ```{r}
 
 ```
 
 Attribution of Sources:
+
+-   1a: Subscript out of bounds error in table version of the dice game:
+
+    -   Source: <https://tysonbarrett.com/jekyll/update/2019/10/16/filter_mutate_keep/>
+
+    -   I was getting a subscript out of bounds error for the 3rd version of the game, in situations where the sample did not have a 3 or 5 in it.
+
+    -   This source helped me realize that I need to condition on 3 or 5 otherwise multiply the respective 6 and 10 by 0 for the winnings calculation if one or both are not present in my sample.
+
+-   
