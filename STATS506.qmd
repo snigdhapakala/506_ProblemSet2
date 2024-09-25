@@ -218,27 +218,26 @@ Setting the seed ensures identical results for both instances of 3 and 3000 roll
 library(microbenchmark)
 
 # 1000 dice rolls for each version
-results <- microbenchmark(
-  Loop = play_dice_loop(1000),
-  Vectorized = play_dice_vecs(1000),
-  Table = play_dice_tbl(1000),
-  Sapply = play_dice_sapply(1000)
+results_1000 <- microbenchmark(
+  Loop_1000 = play_dice_loop(1000),
+  Vectorized_1000 = play_dice_vecs(1000),
+  Table_1000 = play_dice_tbl(1000),
+  Sapply_1000 = play_dice_sapply(1000)
 )
 
 # 100000 dice rolls for each version
-results2 <- microbenchmark(
-  Loop2 = play_dice_loop(100000),
-  Vectorized2 = play_dice_vecs(100000),
-  Table2 = play_dice_tbl(100000),
-  Sapply2 = play_dice_sapply(100000)
+results_100000 <- microbenchmark(
+  Loop_100000 = play_dice_loop(100000),
+  Vectorized_100000 = play_dice_vecs(100000),
+  Table_100000 = play_dice_tbl(100000),
+  Sapply_100000 = play_dice_sapply(100000)
 )
 
-
-print(results)
-print(results2)
+# Get results in the same units by using rbind (source: Professor Errickson)
+print(rbind(results_1000, results_100000))
 ```
 
-These results are very interesting. In the smaller input run with 1,000 dice rolls, the fastest version was the vectorized functions one (version 2) followed by sapply, then table, and then loop. However, in the 100,000 dice rolls, the sapply function actually beat the vectorized one by a little bit in its mean and median values! The other two stayed in the same order as the smaller input.
+These results are very interesting. In the smaller input run with 1,000 dice rolls, the fastest version was the vectorized functions one (version 2) followed by sapply, then table, and then loop. However, in the 100,000 dice rolls, the sapply function actually beat the vectorized one by a little bit in its mean and median values! The other two stayed in the same order as the smaller input. And then, as expected, the processing time in general for all 4 versions in the 100,000 rolls was significantly higher than those of the 1,000 roll input.
 
 ### 1e:
 
@@ -348,7 +347,7 @@ cars_data$Highway_MPG <- log(cars_data$Highway_MPG)
 #new_highway_mpg <- mean(cars_data$Highway_MPG)
 ```
 
-### 2d: double check with professor: is my interpretation "precise" and also confirm that horsepower etc are all actually being controlled
+### 2d: 
 
 ```{r}
 
@@ -360,25 +359,23 @@ lin_reg <- lm(Highway_MPG ~ Torque + Horsepower + Dim_Height + Dim_length + Dim_
 summary(lin_reg)
 ```
 
-These results imply that controlling for horsepower, car dimensions and the year the car was released, 2 cars that differ in torque by 1 unit are expected to differ in highway MPG by −0.0023 units. Since the p-value of this coefficient is much lower than a default significance level of a = 0.05, we see torque does improve the predictive performance relative to our model.
+These results imply that controlling for horsepower, car dimensions and the year the car was released, 2 cars that differ in torque by 1 unit are expected to differ in highway MPG by −0.0023 units. Since the p-value of this coefficient, 2 x 10\^-16, is much lower than a default significance level of a = 0.05, we see there is evidence of a strong relationship between torque and highway MPG on average. This also implies that torque does improve the predictive performance of our model of highway MPG.
 
-### 2e: do not understand at all; 
+### 2e: 
 
 ```{r}
 lin_reg_interaction <- lm(Highway_MPG ~ Torque * Horsepower + Dim_Height + Dim_length + Dim_Width + Year, data = cars_data)
 
-# interaction plots info from lecture:
-# emmip(mod3, gear ~ hp, at = list(hp = c(100, 150, 200, 250)))
-# table(mtcars$gear)
-# 
-# library(interactions)
-# interact_plot(mod3, pred = "hp", modx = "gear")
+# Check reasonable values of Torque and Horsepower
+hist(cars_data$Torque) # 200, 250, and 300 seem like reasonable values
+summary(cars_data$Horsepower) # mean: 267.5, median: 263 sd: 97.4
+hist(cars_data$Horsepower) # this shows that mean, mean - 1*sd, and mean + 1*sd are reasonable values for horsepower, at around 170, 270, and 370. The majority of the data lies between 150 to 350, so these are very reasonable
 
-# question:
-# Refit the model (with lm) and generate an interaction plot, showing how the relationship between torque and MPG changes as horsepower changes. Choose reasonable values of torque, and show lines for three different reasonable values of horsepower.
-# 
-# (Hint: If you choose to use the interactions package for this, look at the at = argument to help with how year comes into play - choose a reasonable single value for year.
+library(interactions)
+interact_plot(lin_reg_interaction, pred = "Torque", modx = "Horsepower", at = list(Torque = c(150, 200, 300))) # We specifically let it create the plot using default values for horsepower since glancing at the histogram above showed these are reasonable.
 ```
+
+Interpretation of this plot: This plot helps us see the relationship between all 3 of these variables a lot more conveniently. It is clear that as Torque increases, the highway mileage decreases. But if the vehicle's horsepower is higher, the rate at which the highway MPG decreases is lower than if if the horsepower is lower. This can be seen by the higher magnitude of the slope in the -1SD line, compared to the other two lines.
 
 ### 2f:
 
@@ -406,7 +403,7 @@ lm_results_df
 
 Both of these results are identical for the slope coefficients!
 
-Attribution of Sources:
+### Attribution of Sources:
 
 -   1a: Subscript out of bounds error in table version of the dice game:
 
