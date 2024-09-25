@@ -75,6 +75,7 @@ play_dice_vecs <- function(rolls) {
   roll_outcomes <- c(sample(1:6, rolls, replace = TRUE))
   # From the outcomes, add up all the 3s and 5s and multiply by their respective doubling scalor for total winnings
   winnings <- (sum(roll_outcomes == 3) * 6) + (sum(roll_outcomes == 5) * 10)
+  
   # Return net amount
   return(winnings - cost)
 }
@@ -101,12 +102,14 @@ play_dice_tbl <- function(rolls) {
   if (rolls != floor(rolls)){
     stop("Integer required for the number of rolls")
   }
+  
   cost <- rolls * 2
   roll_outcomes <- table(sample(1:6, rolls, replace = TRUE))
   # The following code prevents an out of bounds error if 3 or 5 are not in the sample
   winnings <- ((ifelse("3" %in% names(roll_outcomes), roll_outcomes[["3"]], 0) * 6) +
                 (ifelse("5" %in% names(roll_outcomes), roll_outcomes[["5"]], 0) * 10))
   # cat(paste("cost:", cost, "outcomes:", roll_outcomes, "winnings:", winnings))
+  
   return(winnings - cost)
 }
 
@@ -141,6 +144,7 @@ play_dice_sapply <- function(rolls) {
   # Use sapply to apply this function to both 3 and 5 to extract their frequencies in our sample
   frequencies <- sapply(c(3, 5), freq_func)
   winnings <- (frequencies[1] * 6) + (frequencies[2] * 10)
+  
   return(winnings - cost)
 }
 
@@ -212,8 +216,8 @@ Setting the seed ensures identical results for both instances of 3 and 3000 roll
 
 ```{r}
 library(microbenchmark)
-set.seed(092324)  # For consistent results
 
+# 1000 dice rolls for each version
 results <- microbenchmark(
   Loop = play_dice_loop(1000),
   Vectorized = play_dice_vecs(1000),
@@ -221,65 +225,186 @@ results <- microbenchmark(
   Sapply = play_dice_sapply(1000)
 )
 
-print(results)
-
+# 100000 dice rolls for each version
 results2 <- microbenchmark(
-  Loop = play_dice_loop(100000),
-  Vectorized = play_dice_vecs(100000),
-  Table = play_dice_tbl(100000),
-  Sapply = play_dice_sapply(100000)
+  Loop2 = play_dice_loop(100000),
+  Vectorized2 = play_dice_vecs(100000),
+  Table2 = play_dice_tbl(100000),
+  Sapply2 = play_dice_sapply(100000)
 )
 
-results2
+
+print(results)
+print(results2)
 ```
+
+These results are very interesting. In the smaller input run with 1,000 dice rolls, the fastest version was the vectorized functions one (version 2) followed by sapply, then table, and then loop. However, in the 100,000 dice rolls, the sapply function actually beat the vectorized one by a little bit in its mean and median values! The other two stayed in the same order as the smaller input.
 
 ### 1e:
 
+In order for this game to be fair, we need the expected value of the rolls to be 0 so it is not advantageous to the player or the dealer/house. I will calculate the expected value in the following R-chunk:
+
 ```{r}
 
+#' Monte Carlo simulation to check fairness of the game
+#'
+#' @param rolls Number of rolls user chooses to roll/pay for
+#' @param nsim Number of simulations to check fairness of game; going with 100000 for a robust simulation
+#'
+#' @return This function returns the average net amount we expect with the selected rolls and number of simulations
+#' @export
+#'
+#' @examples
+monte_carlo_sim <- function(rolls, nsim) {
+  results <- numeric(nsim)
+  
+  for (i in 1:nsim) {
+    # Using one of the quicker functions since we already showed they all have identical outputs when controlled for randomization
+    results[i] <- play_dice_vecs(rolls)
+  }
+  
+  return(mean(results))
+}
 
+# Set parameters
+set.seed(092424)  # Control randomization
+
+# Run the Monte Carlo simulation for different roll counts
+net_result_10_rolls <- monte_carlo_sim(10, 100000)
+net_result_100_rolls <- monte_carlo_sim(100, 100000)
+net_result_1000_rolls <- monte_carlo_sim(1000, 100000)
+
+# Display results
+cat(paste("Average net result over 100,000 simulations for 10 rolls:", net_result_10_rolls, "\n"))
+cat(paste("Average net result over 100,000 simulations for 100 rolls:", net_result_100_rolls, "\n"))
+cat(paste("Average net result over 100,000 simulations for 1,000 rolls:", net_result_1000_rolls, "\n"))
 ```
+
+If this was a fair game, we expect the average net result to be 0 to indicate that the expected value in a fair game where neither the player nor dealer has an advantage is \$0 won/ \$0 lost. Since this number is positive each simulation, regardless of roll count, we know this suggests the player is more likely to win than lose money, making this an unfair game in the favor of the player.
 
 ## Problem 2
 
 ### 2a:
 
 ```{r}
-
-
+cars_data <- read.csv("cars.csv")
+names(cars_data) <- c("Dim_Height" 
+                      ,"Dim_length"
+                      ,"Dim_Width"
+                      ,"Driveline"
+                      ,"Engine_Type"
+                      ,"Hybrid"
+                      ,"Forward_Gear_Num"
+                      ,"Transmission"
+                      ,"City_MPG"
+                      ,"Fuel_Type"
+                      ,"Highway_MPG"
+                      ,"Classification"
+                      ,"ID"
+                      ,"Make"
+                      ,"Model_Year"
+                      ,"Year"
+                      ,"Horsepower"
+                      ,"Torque")
 ```
 
 ### 2b:
 
 ```{r}
+# Figure out current row count per fuel type
+fuel_tbl <- table(cars_data$Fuel_Type)
 
+# Create subset where fuel type is just gasoline
+cars_data <- cars_data[cars_data$Fuel_Type == "Gasoline", ]
+
+# Check new dataset's row count
+nrow(cars_data) # This matches the count in the table for gasoline, confirming we created the subset correctly
 ```
 
 ### 2c:
 
 ```{r}
+# Will create histogram to examine gas mileage distribution
 
-
+hist(cars_data$Highway_MPG, main = "Highway Gas Mileage Distribution", xlab = "Highway MPG", ylab = "Frequency", breaks = 30)
 ```
 
-### 2d:
+This distribution is skewed right, so a log transformation could be used to correct the skewness:
+
+```{r}
+hist(log(cars_data$Highway_MPG), main = "Highway Gas Mileage Log Transformation", xlab = "Log(Highway MPG)", ylab = "Frequency", breaks = 30)
+```
+
+This significantly reduced the skewness! Now we will replace the original variable with this to use it going forward:
+
+```{r}
+# Track original mean of this column before transformation
+# orig_highway_mpg <- mean(cars_data$Highway_MPG)
+
+# Transform Highway MPG variable to log version moving forward
+cars_data$Highway_MPG <- log(cars_data$Highway_MPG)
+
+# A way to check the log function transformed this variable
+#new_highway_mpg <- mean(cars_data$Highway_MPG)
+```
+
+### 2d: double check with professor: is my interpretation "precise" and also confirm that horsepower etc are all actually being controlled
 
 ```{r}
 
+# Factor year as a categorical variable
+cars_data$Year <- as.factor(cars_data$Year)
+
+lin_reg <- lm(Highway_MPG ~ Torque + Horsepower + Dim_Height + Dim_length + Dim_Width + Year, data = cars_data)
+
+summary(lin_reg)
 ```
 
-### 2e:
+These results imply that controlling for horsepower, car dimensions and the year the car was released, 2 cars that differ in torque by 1 unit are expected to differ in highway MPG by −0.0023 units. Since the p-value of this coefficient is much lower than a default significance level of a = 0.05, we see torque does improve the predictive performance relative to our model.
+
+### 2e: do not understand at all; 
 
 ```{r}
+lin_reg_interaction <- lm(Highway_MPG ~ Torque * Horsepower + Dim_Height + Dim_length + Dim_Width + Year, data = cars_data)
 
+# interaction plots info from lecture:
+# emmip(mod3, gear ~ hp, at = list(hp = c(100, 150, 200, 250)))
+# table(mtcars$gear)
+# 
+# library(interactions)
+# interact_plot(mod3, pred = "hp", modx = "gear")
 
+# question:
+# Refit the model (with lm) and generate an interaction plot, showing how the relationship between torque and MPG changes as horsepower changes. Choose reasonable values of torque, and show lines for three different reasonable values of horsepower.
+# 
+# (Hint: If you choose to use the interactions package for this, look at the at = argument to help with how year comes into play - choose a reasonable single value for year.
 ```
 
 ### 2f:
 
 ```{r}
+# Used notes from STATS 500 Linear Regression to do all of the matrix algebra
+design_mat_X <- model.matrix(~ Torque + Horsepower + Dim_Height + Dim_length + Dim_Width + Year, data = cars_data)
 
+response_Y <- cars_data$Highway_MPG
+
+# We use ((X^T(X))^-1)(X^T(Y)) to calculate the estimates of the slope coefficients beta hat
+
+X_T_X <- t(design_mat_X) %*% design_mat_X
+X_T_X_inverse <- solve(X_T_X)
+X_T_y <- t(design_mat_X) %*% response_Y
+
+beta_hat <- X_T_X_inverse %*% X_T_y
+
+lm_results <- summary(lin_reg)$coefficients[, 1]
+# vertical_lm_results for readability with the beta_hat values:
+lm_results_df <- data.frame(Coefficients = lm_results)
+
+beta_hat
+lm_results_df
 ```
+
+Both of these results are identical for the slope coefficients!
 
 Attribution of Sources:
 
@@ -291,4 +416,18 @@ Attribution of Sources:
 
     -   This source helped me realize that I need to condition on 3 or 5 otherwise multiply the respective 6 and 10 by 0 for the winnings calculation if one or both are not present in my sample.
 
--   
+-   1e: Monte carlo simulation
+
+    -   Source: <https://www.countbayesie.com/blog/2015/3/3/6-amazing-trick-with-monte-carlo-simulations>
+
+    -   This gave me the idea to put the simulation in a function so I can call it multiple times to reinforce my interpretation of the game's fairness.
+
+-   2c: "Transformation" meaning to determine if it is required
+
+    -   Source: <https://stats.libretexts.org/Bookshelves/Applied_Statistics/Biological_Statistics_(McDonald)/04%3A_Tests_for_One_Measurement_Variable/4.06%3A_Data_Transformations>
+
+    -   I was confused by the wording of "transformation" and this source helped me realize that that's a method for skewed data to account for outliers or unstable variance.
+
+-   2d: used lecture notes to get the as.factor syntax correct
+
+-   2f: used STATS 500 notes for the beta hat calculation
