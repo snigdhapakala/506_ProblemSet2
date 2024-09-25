@@ -7,6 +7,8 @@ format:
     embed-resources: true
 ---
 
+### Link to my GitHub Repository for HW2: <https://github.com/snigdhapakala/506_ProblemSet2>
+
 ## Problem 1
 
 ### 1a:
